@@ -143,6 +143,9 @@
       } else {
         list.push({ type: 'spike', worldX: x, width: 40, height: 38 + rnd() * 16 });
       }
+      if (rnd() < 0.15) {
+        list.push({ type: 'orb', worldX: x + 60 + rnd() * 40, height: 90 + rnd() * 50, radius: ORB_RADIUS });
+      }
     }
     return list;
   }
@@ -162,6 +165,8 @@
 
   const GRAVITY = 2600;
   const JUMP_VELOCITY = -840;
+  const ORB_VELOCITY = -880;
+  const ORB_RADIUS = 16;
   const PLAYER_SIZE = 42;
   const PLAYER_X = 130;
 
@@ -227,6 +232,10 @@
       lastObstacleWorldX += 40;
     } else {
       obstacles.push({ type: 'block', worldX: lastObstacleWorldX, width: rand(44, 60), height: rand(46, 72) });
+    }
+
+    if (Math.random() < 0.16) {
+      obstacles.push({ type: 'orb', worldX: lastObstacleWorldX + rand(70, 130), height: rand(90, 150), radius: ORB_RADIUS });
     }
   }
 
@@ -452,7 +461,17 @@
   }
 
   function jump() {
-    if (state === 'playing' && player.onGround) {
+    if (state !== 'playing') return;
+    const orb = findActiveOrb();
+    if (orb) {
+      orb.used = true;
+      player.vy = ORB_VELOCITY;
+      player.onGround = false;
+      player.squash = 1;
+      bursts.push(makeBurst(PLAYER_X + PLAYER_SIZE / 2, player.y + PLAYER_SIZE / 2, '#ffe14f'));
+      return;
+    }
+    if (player.onGround) {
       player.vy = JUMP_VELOCITY;
       player.onGround = false;
       player.squash = 1;
@@ -494,6 +513,7 @@
       { type: 'spike', worldX: worldX + 68, width: 30, height: 38 }
     ];
     if (tool === 'block') return [{ type: 'block', worldX, width: 50, height: 60 }];
+    if (tool === 'orb') return [{ type: 'orb', worldX, height: 110, radius: ORB_RADIUS }];
     return [];
   }
 
@@ -503,6 +523,11 @@
     if (editorTool === 'erase') {
       const idx = obstacles.findIndex(o => {
         const sx = o.worldX - editorScroll;
+        if (o.type === 'orb') {
+          const cy = GROUND_Y - o.height;
+          const dx = clientX - sx, dy = clientY - cy;
+          return dx * dx + dy * dy <= (o.radius + 10) * (o.radius + 10);
+        }
         const topY = o.type === 'pipe' ? 0 : GROUND_Y - o.height;
         return clientX >= sx - 6 && clientX <= sx + o.width + 6 && clientY >= topY - 10 && clientY <= GROUND_Y + 10;
       });
@@ -536,6 +561,7 @@
 
   function enterEditor() {
     state = 'editor';
+    obstacles.forEach(o => { if (o.type === 'orb') o.used = false; });
     hideAllScreens();
     editorPanel.classList.remove('hidden');
     scoreEl.classList.add('hidden');
@@ -777,6 +803,31 @@
     return { x: screenX, y: GROUND_Y - o.height, w: o.width, h: o.height };
   }
 
+  function obstacleWidth(o) {
+    return o.type === 'orb' ? o.radius * 2 : o.width;
+  }
+
+  function orbScreenPos(o) {
+    return { x: o.worldX - distance, y: GROUND_Y - o.height };
+  }
+
+  function circleRectOverlap(cx, cy, r, rect) {
+    const closestX = clamp(cx, rect.x, rect.x + rect.w);
+    const closestY = clamp(cy, rect.y, rect.y + rect.h);
+    const dx = cx - closestX, dy = cy - closestY;
+    return dx * dx + dy * dy <= r * r;
+  }
+
+  function findActiveOrb() {
+    const p = playerRect(-8);
+    for (const o of obstacles) {
+      if (o.type !== 'orb' || o.used) continue;
+      const pos = orbScreenPos(o);
+      if (circleRectOverlap(pos.x, pos.y, o.radius, p)) return o;
+    }
+    return null;
+  }
+
   function rectsOverlap(a, b) {
     return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
   }
@@ -796,6 +847,7 @@
     }
 
     for (const o of obstacles) {
+      if (o.type === 'orb') continue;
       const r = obstacleScreenRect(o);
       if (o.type === 'spike') {
         const inset = { x: r.x + r.w * 0.28, y: r.y + r.h * 0.35, w: r.w * 0.44, h: r.h * 0.65 };
@@ -887,7 +939,7 @@
     if (mode === 'endless' || mode === 'hardcore') {
       const cfg = ENDLESS_CONFIGS[mode];
       while (lastObstacleWorldX - distance < W * 1.3) spawnObstacleEndless(cfg);
-      obstacles = obstacles.filter(o => (o.worldX - distance + o.width) > -50);
+      obstacles = obstacles.filter(o => (o.worldX - distance + obstacleWidth(o)) > -50);
     } else {
       progressBarFill.style.width = Math.min(100, (distance / currentLevel.length) * 100) + '%';
       if (levelPlayMode === 'timetrial') levelTimerEl.textContent = levelElapsed.toFixed(1) + 's';
@@ -1064,6 +1116,28 @@
         ctx.lineWidth = 1.5;
         ctx.strokeRect(screenX + 1, 1, o.width - 2, Math.max(0, o.topHeight - 2));
         ctx.strokeRect(screenX + 1, o.bottomY + 1, o.width - 2, Math.max(0, GROUND_Y - o.bottomY - 2));
+        ctx.restore();
+        continue;
+      }
+
+      if (o.type === 'orb') {
+        const pos = orbScreenPos(o);
+        if (pos.x > W + 30 || pos.x < -30) continue;
+        const pulse = 0.75 + 0.25 * Math.sin(distance * 0.02 + o.worldX * 0.01);
+        ctx.save();
+        ctx.globalAlpha = o.used ? 0.35 : pulse;
+        ctx.shadowColor = '#ffe14f';
+        ctx.shadowBlur = 20;
+        const grad = ctx.createRadialGradient(pos.x, pos.y, 2, pos.x, pos.y, o.radius);
+        grad.addColorStop(0, '#fff8d0');
+        grad.addColorStop(1, '#ffe14f');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, o.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
         ctx.restore();
         continue;
       }
