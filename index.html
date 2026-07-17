@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Neon Dash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <button id="muteBtn" class="iconBtn" aria-label="Toggle music">&#9835;</button>
+  <button id="checkpointBtn" class="iconBtn checkpointBtn hidden" aria-label="Set checkpoint">&#10003;</button>
+
+  <div id="hud">
+    <div id="modeLabel" class="hidden"></div>
+    <div id="score">0</div>
+    <div id="best">BEST 0</div>
+    <div id="levelProgressWrap" class="hidden">
+      <div id="levelName"></div>
+      <div id="levelTimer" class="hidden"></div>
+      <div id="progressBarBg"><div id="progressBarFill"></div></div>
+      <div id="practiceTag" class="hidden">PRACTICE MODE &mdash; CHECKPOINTS ENABLED</div>
+    </div>
+  </div>
+
+  <div id="menuScreen" class="screen">
+    <h1 class="logo">NEON<span>DASH</span></h1>
+    <div class="modeGrid">
+      <div class="quickModes">
+        <button id="endlessBtn" class="modeBtn">
+          <span class="modeTitle">ENDLESS</span>
+          <span class="modeSub">BEST <em id="menuBest">0</em></span>
+        </button>
+        <button id="hardcoreBtn" class="modeBtn hardcore">
+          <span class="modeTitle">HARDCORE</span>
+          <span class="modeSub">BEST <em id="menuHardcoreBest">0</em></span>
+        </button>
+        <button id="shipBtn" class="modeBtn ship">
+          <span class="modeTitle">SHIP</span>
+          <span class="modeSub">BEST <em id="menuShipBest">0</em></span>
+        </button>
+      </div>
+
+      <div class="playModeRow" id="playModeRow">
+        <button class="playModePill active" data-play-mode="normal">NORMAL</button>
+        <button class="playModePill" data-play-mode="practice">PRACTICE</button>
+        <button class="playModePill" data-play-mode="timetrial">TIME TRIAL</button>
+      </div>
+
+      <div id="levelGrid" class="levelGrid"></div>
+
+      <div class="customLevelsSection">
+        <div class="customLevelsHeader">
+          <span>CUSTOM LEVELS</span>
+          <button id="createLevelBtn" class="menuBtnSmall tiny">+ CREATE LEVEL</button>
+        </div>
+        <div id="customLevelList" class="customLevelList"></div>
+      </div>
+    </div>
+    <p class="hint">TAP, CLICK, OR PRESS <b>SPACE</b> TO JUMP &mdash; HOLD IN SHIP MODE</p>
+  </div>
+
+  <div id="gameOverScreen" class="screen hidden">
+    <h1 class="logo small">GAME OVER</h1>
+    <p class="statLine" id="gameOverStat1"></p>
+    <p class="statLine" id="gameOverStat2"></p>
+    <div class="btnRow">
+      <button id="retryBtn" class="menuBtnSmall">RETRY</button>
+      <button id="gameOverMenuBtn" class="menuBtnSmall">MENU</button>
+    </div>
+  </div>
+
+  <div id="levelCompleteScreen" class="screen hidden">
+    <h1 class="logo small complete">LEVEL COMPLETE</h1>
+    <p class="statLine" id="completeLevelName"></p>
+    <p class="statLine" id="completeTime"></p>
+    <p class="statLine accent" id="completeBestTime"></p>
+    <div class="btnRow">
+      <button id="nextLevelBtn" class="menuBtnSmall">NEXT LEVEL</button>
+      <button id="completeMenuBtn" class="menuBtnSmall">MENU</button>
+    </div>
+  </div>
+
+  <div id="editorPanel" class="editorPanel hidden">
+    <div class="editorRow">
+      <input id="editorName" type="text" maxlength="24" placeholder="LEVEL NAME">
+      <label class="editorField">LENGTH <input id="editorLength" type="number" min="500" max="20000" step="200" value="4000"></label>
+      <label class="editorField">SPEED <input id="editorSpeed" type="number" min="150" max="900" step="10" value="380"></label>
+    </div>
+    <div class="editorRow">
+      <button class="toolBtn active" data-tool="spike">SPIKE</button>
+      <button class="toolBtn" data-tool="double">DOUBLE</button>
+      <button class="toolBtn" data-tool="triple">TRIPLE</button>
+      <button class="toolBtn" data-tool="block">BLOCK</button>
+      <button class="toolBtn" data-tool="erase">ERASE</button>
+    </div>
+    <div class="editorRow">
+      <button id="editorScrollLeft" class="menuBtnSmall tiny">&#9664; SCROLL</button>
+      <button id="editorScrollRight" class="menuBtnSmall tiny">SCROLL &#9654;</button>
+      <button id="editorClearBtn" class="menuBtnSmall tiny danger">CLEAR</button>
+      <button id="editorTestBtn" class="menuBtnSmall tiny">TEST PLAY</button>
+      <button id="editorSaveBtn" class="menuBtnSmall tiny">SAVE</button>
+      <button id="editorBackBtn" class="menuBtnSmall tiny">BACK</button>
+    </div>
+  </div>
+</div>
+
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
