@@ -46,6 +46,17 @@
         </button>
       </div>
 
+      <div class="chestCollectionRow">
+        <button id="dailyChestBtn" class="modeBtn chest">
+          <span class="modeTitle" id="chestTitle">DAILY CHEST</span>
+          <span class="modeSub" id="chestStatus">TAP TO OPEN</span>
+        </button>
+        <button id="collectionBtn" class="modeBtn collection">
+          <span class="modeTitle">SKINS</span>
+          <span class="modeSub" id="collectionCount">0 / 0</span>
+        </button>
+      </div>
+
       <div class="playModeRow">
         <button id="miniModeToggle" class="playModePill miniToggle">MINI MODE</button>
       </div>
@@ -90,6 +101,26 @@
     </div>
   </div>
 
+  <div id="chestRevealScreen" class="screen hidden">
+    <h1 class="logo small complete">CHEST OPENED</h1>
+    <div id="chestRevealSwatch" class="chestSwatch"></div>
+    <p class="statLine" id="chestRevealName"></p>
+    <p class="statLine accent" id="chestRevealSub"></p>
+    <div class="btnRow">
+      <button id="chestRevealBtn" class="menuBtnSmall">NICE</button>
+    </div>
+  </div>
+
+  <div id="collectionScreen" class="screen hidden">
+    <h1 class="logo small">SKIN COLLECTION</h1>
+    <p class="statLine" id="collectionProgress"></p>
+    <div class="rarityLegend" id="rarityLegend"></div>
+    <div id="collectionGrid" class="collectionGrid"></div>
+    <div class="btnRow">
+      <button id="collectionBackBtn" class="menuBtnSmall">BACK</button>
+    </div>
+  </div>
+
   <div id="editorPanel" class="editorPanel hidden">
     <div class="editorRow">
       <input id="editorName" type="text" maxlength="24" placeholder="LEVEL NAME">
@@ -105,7 +136,9 @@
       <button class="toolBtn" data-tool="pad">PAD</button>
       <button class="toolBtn" data-tool="miniPortal">MINI</button>
       <button class="toolBtn" data-tool="normalPortal">NORMAL</button>
+      <button class="toolBtn" data-tool="gravityPortal">GRAVITY</button>
       <button class="toolBtn" data-tool="erase">ERASE</button>
+      <button id="editorSideToggle" class="menuBtnSmall tiny">FLOOR MODE</button>
     </div>
     <div class="editorRow">
       <button id="editorScrollLeft" class="menuBtnSmall tiny">&#9664; SCROLL</button>

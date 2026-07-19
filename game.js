@@ -33,12 +33,28 @@
   const completeBestTime = document.getElementById('completeBestTime');
   const muteBtn = document.getElementById('muteBtn');
 
+  const dailyChestBtn = document.getElementById('dailyChestBtn');
+  const chestStatusEl = document.getElementById('chestStatus');
+  const chestRevealScreen = document.getElementById('chestRevealScreen');
+  const chestRevealSwatch = document.getElementById('chestRevealSwatch');
+  const chestRevealName = document.getElementById('chestRevealName');
+  const chestRevealSub = document.getElementById('chestRevealSub');
+  const chestRevealBtn = document.getElementById('chestRevealBtn');
+  const collectionBtn = document.getElementById('collectionBtn');
+  const collectionCountEl = document.getElementById('collectionCount');
+  const collectionScreen = document.getElementById('collectionScreen');
+  const collectionProgress = document.getElementById('collectionProgress');
+  const collectionGridEl = document.getElementById('collectionGrid');
+  const rarityLegendEl = document.getElementById('rarityLegend');
+  const collectionBackBtn = document.getElementById('collectionBackBtn');
+
   const createLevelBtn = document.getElementById('createLevelBtn');
   const customLevelListEl = document.getElementById('customLevelList');
   const editorPanel = document.getElementById('editorPanel');
   const editorNameInput = document.getElementById('editorName');
   const editorLengthInput = document.getElementById('editorLength');
   const editorSpeedInput = document.getElementById('editorSpeed');
+  const editorSideToggleBtn = document.getElementById('editorSideToggle');
   const editorScrollLeftBtn = document.getElementById('editorScrollLeft');
   const editorScrollRightBtn = document.getElementById('editorScrollRight');
   const editorClearBtn = document.getElementById('editorClearBtn');
@@ -50,6 +66,99 @@
   const BEST_TIMES_KEY = 'neonDashBestTimes';
   const CUSTOM_LEVELS_KEY = 'neonDashCustomLevels';
   const BEST_KEYS = { endless: 'neonDashBest', hardcore: 'neonDashHardcoreBest', ship: 'neonDashShipBest' };
+  const UNLOCKED_SKINS_KEY = 'neonDashUnlockedSkins';
+  const EQUIPPED_SKIN_KEY = 'neonDashEquippedSkin';
+  const LAST_CHEST_KEY = 'neonDashLastChest';
+
+  const RARITY_INFO = {
+    common: { label: 'COMMON', color: '#9fb3c8', weight: 60 },
+    rare: { label: 'RARE', color: '#4ff2ff', weight: 27 },
+    epic: { label: 'EPIC', color: '#c48bff', weight: 10 },
+    legendary: { label: 'LEGENDARY', color: '#ffe14f', weight: 3 }
+  };
+
+  const SIGNATURE_SKINS = [
+    { id: 'default', name: 'NEON', c1: '#4ff2ff', c2: '#ff3df0', rarity: 'common' },
+    { id: 'solar', name: 'SOLAR FLARE', c1: '#fff35c', c2: '#ff7a1a', rarity: 'common' },
+    { id: 'toxic', name: 'TOXIC', c1: '#baff3d', c2: '#00c46a', rarity: 'common' },
+    { id: 'royal', name: 'ROYAL', c1: '#9d6bff', c2: '#3d5bff', rarity: 'rare' },
+    { id: 'crimson', name: 'CRIMSON', c1: '#ff6b6b', c2: '#8a0026', rarity: 'rare' },
+    { id: 'glacier', name: 'GLACIER', c1: '#c8faff', c2: '#3d8bff', rarity: 'rare' },
+    { id: 'gilded', name: 'GILDED', c1: '#fff2b8', c2: '#c9971f', rarity: 'epic' },
+    { id: 'void', name: 'VOID', c1: '#c48bff', c2: '#3d1a66', rarity: 'legendary' }
+  ];
+
+  const SKIN_ADJ = ['NEON', 'PLASMA', 'QUANTUM', 'CYBER', 'LASER', 'PHANTOM', 'GLITCH', 'VAPOR', 'CHROME', 'STATIC',
+    'VOLT', 'RETRO', 'ATOMIC', 'LUNAR', 'SOLAR', 'ARCANE', 'FROST', 'EMBER', 'SHADOW', 'CRYSTAL',
+    'TURBO', 'HYPER', 'COSMIC', 'RADIANT', 'FERAL', 'SPECTRAL', 'MIDNIGHT', 'GOLDEN', 'CRIMSON', 'AZURE'];
+  const SKIN_NOUN = ['WAVE', 'FLARE', 'BLADE', 'CORE', 'DRIFT', 'SURGE', 'SPARK', 'HAZE', 'PULSE', 'ECHO',
+    'STORM', 'CIRCUIT', 'MERIDIAN', 'CASCADE', 'RUSH', 'BLOOM', 'RIOT', 'FRACTURE', 'HALO', 'VORTEX',
+    'PRISM', 'NEBULA', 'SIGNAL', 'GRID', 'FLUX', 'ORBIT', 'ZENITH', 'ECLIPSE', 'MIRAGE', 'GLARE'];
+
+  function buildGeneratedSkins(count) {
+    const rng = mulberry32(918273645);
+    const used = new Set();
+    const list = [];
+    for (let i = 0; i < count; i++) {
+      let name;
+      do {
+        const a = SKIN_ADJ[(rng() * SKIN_ADJ.length) | 0];
+        const n = SKIN_NOUN[(rng() * SKIN_NOUN.length) | 0];
+        name = a + ' ' + n;
+      } while (used.has(name));
+      used.add(name);
+
+      const hue1 = rng() * 360;
+      const hue2 = (hue1 + 30 + rng() * 90) % 360;
+      const sat = 70 + rng() * 25;
+      const c1 = `hsl(${hue1.toFixed(0)}, ${sat.toFixed(0)}%, ${(58 + rng() * 12).toFixed(0)}%)`;
+      const c2 = `hsl(${hue2.toFixed(0)}, ${sat.toFixed(0)}%, ${(20 + rng() * 18).toFixed(0)}%)`;
+
+      const roll = rng();
+      const rarity = roll < 0.55 ? 'common' : roll < 0.85 ? 'rare' : roll < 0.97 ? 'epic' : 'legendary';
+
+      list.push({ id: 'gen' + i, name, c1, c2, rarity });
+    }
+    return list;
+  }
+
+  const SKINS = [...SIGNATURE_SKINS, ...buildGeneratedSkins(100)];
+
+  function rollRarity() {
+    const total = Object.values(RARITY_INFO).reduce((s, r) => s + r.weight, 0);
+    let roll = Math.random() * total;
+    for (const key of Object.keys(RARITY_INFO)) {
+      roll -= RARITY_INFO[key].weight;
+      if (roll <= 0) return key;
+    }
+    return 'common';
+  }
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function getUnlockedSkins() {
+    try {
+      const list = JSON.parse(localStorage.getItem(UNLOCKED_SKINS_KEY) || '["default"]');
+      return list.includes('default') ? list : ['default', ...list];
+    } catch (e) { return ['default']; }
+  }
+  function setUnlockedSkins(list) {
+    localStorage.setItem(UNLOCKED_SKINS_KEY, JSON.stringify(list));
+  }
+  function getEquippedSkinId() {
+    return localStorage.getItem(EQUIPPED_SKIN_KEY) || 'default';
+  }
+  function setEquippedSkinId(id) {
+    localStorage.setItem(EQUIPPED_SKIN_KEY, id);
+  }
+  function getEquippedSkin() {
+    return SKINS.find(s => s.id === getEquippedSkinId()) || SKINS[0];
+  }
+  function isChestAvailable() {
+    return localStorage.getItem(LAST_CHEST_KEY) !== todayStr();
+  }
 
   const LEVELS = [
     { id: 1, name: 'NEON DAWN', length: 3600, speed: 320, seed: 101, gapMin: 340, gapMax: 500, doubleChance: 0.05, blockChance: 0.25, tripleChance: 0 },
@@ -123,6 +232,7 @@
     const list = [];
     let x = 500;
     let genMini = false;
+    let genGravity = 'floor';
     while (x < level.length - 500) {
       const gap = level.gapMin + rnd() * (level.gapMax - level.gapMin);
       x += gap;
@@ -132,26 +242,31 @@
         list.push({ type: 'portal', worldX: x - 30, mini: !genMini });
         genMini = !genMini;
       }
+      if (rnd() < 0.04) {
+        list.push({ type: 'gravityPortal', worldX: x - 60 });
+        genGravity = genGravity === 'floor' ? 'ceil' : 'floor';
+      }
+      const side = genGravity;
       if (roll < tripleC) {
         const h = 34 + rnd() * 8;
-        list.push({ type: 'spike', worldX: x, width: 30, height: h });
-        list.push({ type: 'spike', worldX: x + 34, width: 30, height: h });
-        list.push({ type: 'spike', worldX: x + 68, width: 30, height: h });
+        list.push({ type: 'spike', worldX: x, width: 30, height: h, side });
+        list.push({ type: 'spike', worldX: x + 34, width: 30, height: h, side });
+        list.push({ type: 'spike', worldX: x + 68, width: 30, height: h, side });
         x += 68;
       } else if (roll < tripleC + level.doubleChance) {
         const h = 36 + rnd() * 10;
-        list.push({ type: 'spike', worldX: x, width: 34, height: h });
-        list.push({ type: 'spike', worldX: x + 40, width: 34, height: h });
+        list.push({ type: 'spike', worldX: x, width: 34, height: h, side });
+        list.push({ type: 'spike', worldX: x + 40, width: 34, height: h, side });
         x += 40;
       } else if (roll < tripleC + level.doubleChance + level.blockChance) {
-        list.push({ type: 'block', worldX: x, width: 44 + rnd() * 16, height: 46 + rnd() * 26 });
+        list.push({ type: 'block', worldX: x, width: 44 + rnd() * 16, height: 46 + rnd() * 26, side });
       } else if (rnd() < 0.12) {
-        list.push({ type: 'pad', worldX: x, width: 46, height: 14 });
+        list.push({ type: 'pad', worldX: x, width: 46, height: 14, side });
       } else {
-        list.push({ type: 'spike', worldX: x, width: 40, height: 38 + rnd() * 16 });
+        list.push({ type: 'spike', worldX: x, width: 40, height: 38 + rnd() * 16, side });
       }
       if (rnd() < 0.15) {
-        list.push({ type: 'orb', worldX: x + 60 + rnd() * 40, height: 90 + rnd() * 50, radius: ORB_RADIUS });
+        list.push({ type: 'orb', worldX: x + 60 + rnd() * 40, height: 90 + rnd() * 50, radius: ORB_RADIUS, side });
       }
     }
     return list;
@@ -168,6 +283,7 @@
     canvas.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     GROUND_Y = H - Math.max(70, H * 0.14);
+    CEIL_Y = Math.max(50, H * 0.10);
   }
 
   const GRAVITY = 2600;
@@ -179,6 +295,7 @@
   const MINI_PLAYER_SIZE = NORMAL_PLAYER_SIZE * 0.6;
   let PLAYER_SIZE = NORMAL_PLAYER_SIZE;
   let miniMode = false;
+  let gravityDir = 1; // 1 = floor (normal), -1 = ceiling (flipped)
   const PLAYER_X = 130;
 
   const SHIP_GRAVITY = 1500;
@@ -186,6 +303,7 @@
   const SHIP_MAX_VY = 560;
 
   let GROUND_Y = 0;
+  let CEIL_Y = 0;
 
   let state = 'menu'; // menu | playing | gameover | levelcomplete | editor
   let mode = 'endless'; // endless | hardcore | ship | level
@@ -198,6 +316,7 @@
   let inputHeld = false;
 
   let editorTool = 'spike'; // spike | double | triple | block | erase
+  let editorSide = 'floor'; // floor | ceil — placement side for hazard tools
   let editorScroll = 0;
   let editorHoverX = null;
   let editingCustomId = null;
@@ -214,6 +333,7 @@
   function resetPlayer() {
     miniMode = miniModeSelected;
     PLAYER_SIZE = miniModeSelected ? MINI_PLAYER_SIZE : NORMAL_PLAYER_SIZE;
+    gravityDir = 1;
     player.y = GROUND_Y - PLAYER_SIZE;
     player.vy = 0;
     player.onGround = true;
@@ -224,14 +344,28 @@
   function setMiniMode(mini) {
     if (miniMode === mini) return;
     miniMode = mini;
-    const bottom = player.y + PLAYER_SIZE;
-    PLAYER_SIZE = mini ? MINI_PLAYER_SIZE : NORMAL_PLAYER_SIZE;
-    player.y = bottom - PLAYER_SIZE;
+    if (gravityDir === 1) {
+      const bottom = player.y + PLAYER_SIZE;
+      PLAYER_SIZE = mini ? MINI_PLAYER_SIZE : NORMAL_PLAYER_SIZE;
+      player.y = bottom - PLAYER_SIZE;
+    } else {
+      const top = player.y;
+      PLAYER_SIZE = mini ? MINI_PLAYER_SIZE : NORMAL_PLAYER_SIZE;
+      player.y = top;
+    }
     bursts.push(makeBurst(PLAYER_X + PLAYER_SIZE / 2, player.y + PLAYER_SIZE / 2, mini ? '#7cf9ff' : '#ff9df7'));
+  }
+
+  function setGravityDir(dir) {
+    if (gravityDir === dir) return;
+    gravityDir = dir;
+    player.vy = 0;
+    bursts.push(makeBurst(PLAYER_X + PLAYER_SIZE / 2, player.y + PLAYER_SIZE / 2, dir === -1 ? '#39ff8a' : '#ffb347'));
   }
 
   let obstacles = [];
   let lastObstacleWorldX = 0;
+  let spawnGravitySide = 'floor';
   let trail = [];
   let bursts = [];
   let hue = 190;
@@ -245,23 +379,29 @@
     const gap = rand(cfg.gapMin, cfg.gapMax) * (0.85 + speedFactor * 0.15);
     lastObstacleWorldX += gap;
 
+    if (Math.random() < 0.05) {
+      obstacles.push({ type: 'gravityPortal', worldX: lastObstacleWorldX - 30 });
+      spawnGravitySide = spawnGravitySide === 'floor' ? 'ceil' : 'floor';
+    }
+    const side = spawnGravitySide;
+
     if (type === 'spike') {
       if (Math.random() < 0.12) {
-        obstacles.push({ type: 'pad', worldX: lastObstacleWorldX, width: 46, height: 14 });
+        obstacles.push({ type: 'pad', worldX: lastObstacleWorldX, width: 46, height: 14, side });
       } else {
-        obstacles.push({ type: 'spike', worldX: lastObstacleWorldX, width: 40, height: rand(38, 54) });
+        obstacles.push({ type: 'spike', worldX: lastObstacleWorldX, width: 40, height: rand(38, 54), side });
       }
     } else if (type === 'double') {
       const h = rand(36, 46);
-      obstacles.push({ type: 'spike', worldX: lastObstacleWorldX, width: 34, height: h });
-      obstacles.push({ type: 'spike', worldX: lastObstacleWorldX + 40, width: 34, height: h });
+      obstacles.push({ type: 'spike', worldX: lastObstacleWorldX, width: 34, height: h, side });
+      obstacles.push({ type: 'spike', worldX: lastObstacleWorldX + 40, width: 34, height: h, side });
       lastObstacleWorldX += 40;
     } else {
-      obstacles.push({ type: 'block', worldX: lastObstacleWorldX, width: rand(44, 60), height: rand(46, 72) });
+      obstacles.push({ type: 'block', worldX: lastObstacleWorldX, width: rand(44, 60), height: rand(46, 72), side });
     }
 
     if (Math.random() < 0.16) {
-      obstacles.push({ type: 'orb', worldX: lastObstacleWorldX + rand(70, 130), height: rand(90, 150), radius: ORB_RADIUS });
+      obstacles.push({ type: 'orb', worldX: lastObstacleWorldX + rand(70, 130), height: rand(90, 150), radius: ORB_RADIUS, side });
     }
   }
 
@@ -280,6 +420,8 @@
     menuScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
     levelCompleteScreen.classList.add('hidden');
+    chestRevealScreen.classList.add('hidden');
+    collectionScreen.classList.add('hidden');
     editorPanel.classList.add('hidden');
   }
 
@@ -309,6 +451,89 @@
       levelGridEl.appendChild(btn);
     });
     renderCustomLevels();
+    renderChest();
+    renderCollectionButton();
+  }
+
+  function renderChest() {
+    const available = isChestAvailable();
+    dailyChestBtn.disabled = !available;
+    dailyChestBtn.classList.toggle('available', available);
+    chestStatusEl.textContent = available ? 'TAP TO OPEN' : 'COME BACK TOMORROW';
+  }
+
+  function renderCollectionButton() {
+    collectionCountEl.textContent = getUnlockedSkins().length + ' / ' + SKINS.length;
+  }
+
+  function renderRarityLegend() {
+    rarityLegendEl.innerHTML = '';
+    Object.keys(RARITY_INFO).forEach(key => {
+      const info = RARITY_INFO[key];
+      const item = document.createElement('span');
+      item.className = 'rarityLegendItem';
+      item.style.color = info.color;
+      const dot = document.createElement('span');
+      dot.className = 'rarityLegendDot';
+      dot.style.background = info.color;
+      dot.style.boxShadow = `0 0 6px ${info.color}`;
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(info.label));
+      rarityLegendEl.appendChild(item);
+    });
+  }
+
+  function renderCollectionGrid() {
+    const unlocked = getUnlockedSkins();
+    const equipped = getEquippedSkinId();
+    collectionProgress.textContent = unlocked.length + ' / ' + SKINS.length + ' UNLOCKED';
+    collectionGridEl.innerHTML = '';
+    SKINS.forEach(skin => {
+      const owned = unlocked.includes(skin.id);
+      const sw = document.createElement('button');
+      sw.className = 'collectionSwatch rarity-' + skin.rarity + (owned ? '' : ' locked') + (owned && skin.id === equipped ? ' equipped' : '');
+      sw.style.background = `linear-gradient(135deg, ${skin.c1}, ${skin.c2})`;
+      sw.title = owned ? (skin.name + ' — ' + RARITY_INFO[skin.rarity].label) : (skin.name + ' (LOCKED)');
+      sw.disabled = !owned;
+      if (owned) sw.addEventListener('click', () => { setEquippedSkinId(skin.id); renderCollectionGrid(); });
+      collectionGridEl.appendChild(sw);
+    });
+  }
+
+  function openCollection() {
+    renderCollectionGrid();
+    hideAllScreens();
+    collectionScreen.classList.remove('hidden');
+  }
+
+  function openChest() {
+    if (!isChestAvailable()) return;
+    localStorage.setItem(LAST_CHEST_KEY, todayStr());
+    const unlocked = getUnlockedSkins();
+    const lockedAll = SKINS.filter(s => !unlocked.includes(s.id));
+    let pool = SKINS;
+    if (lockedAll.length) {
+      const rarity = rollRarity();
+      const byRarity = lockedAll.filter(s => s.rarity === rarity);
+      pool = byRarity.length ? byRarity : lockedAll;
+    }
+    const won = pick(pool);
+    const isNew = !unlocked.includes(won.id);
+    if (isNew) {
+      setUnlockedSkins([...unlocked, won.id]);
+      setEquippedSkinId(won.id);
+    }
+    const rarityInfo = RARITY_INFO[won.rarity];
+    chestRevealSwatch.style.background = `linear-gradient(135deg, ${won.c1}, ${won.c2})`;
+    chestRevealSwatch.style.borderColor = rarityInfo.color;
+    chestRevealSwatch.style.boxShadow = `0 0 30px ${rarityInfo.color}`;
+    chestRevealName.textContent = won.name;
+    chestRevealName.style.color = rarityInfo.color;
+    chestRevealSub.textContent = rarityInfo.label + ' — ' + (isNew ? 'NEW SKIN UNLOCKED & EQUIPPED' : 'DUPLICATE, ALREADY OWNED');
+    renderChest();
+    renderCollectionButton();
+    hideAllScreens();
+    chestRevealScreen.classList.remove('hidden');
   }
 
   function renderCustomLevels() {
@@ -396,6 +621,7 @@
     trail = [];
     bursts = [];
     levelElapsed = 0;
+    spawnGravitySide = 'floor';
     resetPlayer();
   }
 
@@ -491,14 +717,14 @@
     const orb = findActiveOrb();
     if (orb) {
       orb.used = true;
-      player.vy = ORB_VELOCITY;
+      player.vy = ORB_VELOCITY * gravityDir;
       player.onGround = false;
       player.squash = 1;
       bursts.push(makeBurst(PLAYER_X + PLAYER_SIZE / 2, player.y + PLAYER_SIZE / 2, '#ffe14f'));
       return;
     }
     if (player.onGround) {
-      player.vy = JUMP_VELOCITY;
+      player.vy = JUMP_VELOCITY * gravityDir;
       player.onGround = false;
       player.squash = 1;
     }
@@ -528,21 +754,23 @@
   function getEditorSpeed() { return clamp(parseInt(editorSpeedInput.value, 10) || 380, 150, 900); }
 
   function buildGhostObstacles(tool, worldX) {
-    if (tool === 'spike') return [{ type: 'spike', worldX, width: 40, height: 44 }];
+    const side = editorSide;
+    if (tool === 'spike') return [{ type: 'spike', worldX, width: 40, height: 44, side }];
     if (tool === 'double') return [
-      { type: 'spike', worldX, width: 34, height: 40 },
-      { type: 'spike', worldX: worldX + 40, width: 34, height: 40 }
+      { type: 'spike', worldX, width: 34, height: 40, side },
+      { type: 'spike', worldX: worldX + 40, width: 34, height: 40, side }
     ];
     if (tool === 'triple') return [
-      { type: 'spike', worldX, width: 30, height: 38 },
-      { type: 'spike', worldX: worldX + 34, width: 30, height: 38 },
-      { type: 'spike', worldX: worldX + 68, width: 30, height: 38 }
+      { type: 'spike', worldX, width: 30, height: 38, side },
+      { type: 'spike', worldX: worldX + 34, width: 30, height: 38, side },
+      { type: 'spike', worldX: worldX + 68, width: 30, height: 38, side }
     ];
-    if (tool === 'block') return [{ type: 'block', worldX, width: 50, height: 60 }];
-    if (tool === 'orb') return [{ type: 'orb', worldX, height: 110, radius: ORB_RADIUS }];
-    if (tool === 'pad') return [{ type: 'pad', worldX, width: 46, height: 14 }];
+    if (tool === 'block') return [{ type: 'block', worldX, width: 50, height: 60, side }];
+    if (tool === 'orb') return [{ type: 'orb', worldX, height: 110, radius: ORB_RADIUS, side }];
+    if (tool === 'pad') return [{ type: 'pad', worldX, width: 46, height: 14, side }];
     if (tool === 'miniPortal') return [{ type: 'portal', worldX, mini: true }];
     if (tool === 'normalPortal') return [{ type: 'portal', worldX, mini: false }];
+    if (tool === 'gravityPortal') return [{ type: 'gravityPortal', worldX }];
     return [];
   }
 
@@ -553,15 +781,17 @@
       const idx = obstacles.findIndex(o => {
         const sx = o.worldX - editorScroll;
         if (o.type === 'orb') {
-          const cy = GROUND_Y - o.height;
+          const cy = (o.side === 'ceil') ? CEIL_Y + o.height : GROUND_Y - o.height;
           const dx = clientX - sx, dy = clientY - cy;
           return dx * dx + dy * dy <= (o.radius + 10) * (o.radius + 10);
         }
-        if (o.type === 'portal') {
+        if (o.type === 'portal' || o.type === 'gravityPortal') {
           return clientX >= sx - 10 && clientX <= sx + 10 && clientY >= -10 && clientY <= GROUND_Y + 10;
         }
-        const topY = o.type === 'pipe' ? 0 : GROUND_Y - o.height;
-        return clientX >= sx - 6 && clientX <= sx + o.width + 6 && clientY >= topY - 10 && clientY <= GROUND_Y + 10;
+        const ceil = o.side === 'ceil';
+        const topY = o.type === 'pipe' ? 0 : (ceil ? CEIL_Y : GROUND_Y - o.height);
+        const botY = o.type === 'pipe' ? GROUND_Y : (ceil ? CEIL_Y + o.height : GROUND_Y);
+        return clientX >= sx - 6 && clientX <= sx + o.width + 6 && clientY >= topY - 10 && clientY <= botY + 10;
       });
       if (idx !== -1) obstacles.splice(idx, 1);
       return;
@@ -596,7 +826,7 @@
     obstacles.forEach(o => {
       if (o.type === 'orb') o.used = false;
       if (o.type === 'pad') o.triggered = false;
-      if (o.type === 'portal') o.passed = false;
+      if (o.type === 'portal' || o.type === 'gravityPortal') o.passed = false;
     });
     hideAllScreens();
     editorPanel.classList.remove('hidden');
@@ -746,6 +976,11 @@
     miniModeToggleBtn.classList.toggle('active', miniModeSelected);
   });
 
+  dailyChestBtn.addEventListener('click', openChest);
+  chestRevealBtn.addEventListener('click', goToMenu);
+  collectionBtn.addEventListener('click', openCollection);
+  collectionBackBtn.addEventListener('click', goToMenu);
+
   endlessBtn.addEventListener('click', startEndless);
   hardcoreBtn.addEventListener('click', startHardcore);
   shipBtn.addEventListener('click', startShip);
@@ -765,6 +1000,11 @@
       btn.classList.add('active');
       editorTool = btn.dataset.tool;
     });
+  });
+  editorSideToggleBtn.addEventListener('click', () => {
+    editorSide = editorSide === 'floor' ? 'ceil' : 'floor';
+    editorSideToggleBtn.textContent = editorSide === 'floor' ? 'FLOOR MODE' : 'CEILING MODE';
+    editorSideToggleBtn.classList.toggle('danger', editorSide === 'ceil');
   });
   editorScrollLeftBtn.addEventListener('click', () => {
     editorScroll = Math.max(0, editorScroll - 400);
@@ -843,15 +1083,19 @@
 
   function obstacleScreenRect(o) {
     const screenX = o.worldX - distance;
+    if ((o.side || 'floor') === 'ceil') return { x: screenX, y: CEIL_Y, w: o.width, h: o.height };
     return { x: screenX, y: GROUND_Y - o.height, w: o.width, h: o.height };
   }
 
   function obstacleWidth(o) {
-    return o.type === 'orb' ? o.radius * 2 : o.width;
+    if (o.type === 'orb') return o.radius * 2;
+    if (o.type === 'portal' || o.type === 'gravityPortal') return 10;
+    return o.width;
   }
 
   function orbScreenPos(o) {
-    return { x: o.worldX - distance, y: GROUND_Y - o.height };
+    const ceil = (o.side || 'floor') === 'ceil';
+    return { x: o.worldX - distance, y: ceil ? CEIL_Y + o.height : GROUND_Y - o.height };
   }
 
   function circleRectOverlap(cx, cy, r, rect) {
@@ -890,7 +1134,7 @@
     }
 
     for (const o of obstacles) {
-      if (o.type === 'orb' || o.type === 'pad' || o.type === 'portal') continue;
+      if (o.type === 'orb' || o.type === 'pad' || o.type === 'portal' || o.type === 'gravityPortal') continue;
       const r = obstacleScreenRect(o);
       if (o.type === 'spike') {
         const inset = { x: r.x + r.w * 0.28, y: r.y + r.h * 0.35, w: r.w * 0.44, h: r.h * 0.65 };
@@ -940,47 +1184,66 @@
     distance += speed * dt;
 
     for (const o of obstacles) {
-      if (o.type !== 'portal' || o.passed) continue;
-      if (distance + PLAYER_X >= o.worldX) {
-        o.passed = true;
-        setMiniMode(o.mini);
+      if (o.passed) continue;
+      if (o.type === 'portal') {
+        if (distance + PLAYER_X >= o.worldX) { o.passed = true; setMiniMode(o.mini); }
+      } else if (o.type === 'gravityPortal') {
+        if (distance + PLAYER_X >= o.worldX) { o.passed = true; setGravityDir(-gravityDir); }
       }
     }
 
-    player.vy += GRAVITY * dt;
-    const prevBottom = player.y + PLAYER_SIZE;
+    player.vy += GRAVITY * gravityDir * dt;
+    const prevLeading = gravityDir === 1 ? (player.y + PLAYER_SIZE) : player.y;
     player.y += player.vy * dt;
 
     let grounded = false;
-    if (player.vy >= 0) {
+    const activeSide = gravityDir === 1 ? 'floor' : 'ceil';
+    const fallingTowardSurface = gravityDir === 1 ? (player.vy >= 0) : (player.vy <= 0);
+    if (fallingTowardSurface) {
       const playerLeft = PLAYER_X, playerRight = PLAYER_X + PLAYER_SIZE;
       for (const o of obstacles) {
-        if (o.type !== 'block') continue;
+        if (o.type !== 'block' || (o.side || 'floor') !== activeSide) continue;
         const screenX = o.worldX - distance;
         if (screenX + o.width <= playerLeft || screenX >= playerRight) continue;
-        const blockTop = GROUND_Y - o.height;
-        if (prevBottom <= blockTop + 0.5 && player.y + PLAYER_SIZE >= blockTop) {
-          player.y = blockTop - PLAYER_SIZE;
-          player.vy = 0;
-          grounded = true;
-          break;
+        if (gravityDir === 1) {
+          const blockTop = GROUND_Y - o.height;
+          if (prevLeading <= blockTop + 0.5 && player.y + PLAYER_SIZE >= blockTop) {
+            player.y = blockTop - PLAYER_SIZE;
+            player.vy = 0;
+            grounded = true;
+            break;
+          }
+        } else {
+          const blockBottom = CEIL_Y + o.height;
+          if (prevLeading >= blockBottom - 0.5 && player.y <= blockBottom) {
+            player.y = blockBottom;
+            player.vy = 0;
+            grounded = true;
+            break;
+          }
         }
       }
-      if (!grounded && player.y >= GROUND_Y - PLAYER_SIZE) {
-        player.y = GROUND_Y - PLAYER_SIZE;
-        player.vy = 0;
-        grounded = true;
+      if (!grounded) {
+        if (gravityDir === 1 && player.y >= GROUND_Y - PLAYER_SIZE) {
+          player.y = GROUND_Y - PLAYER_SIZE;
+          player.vy = 0;
+          grounded = true;
+        } else if (gravityDir === -1 && player.y <= CEIL_Y) {
+          player.y = CEIL_Y;
+          player.vy = 0;
+          grounded = true;
+        }
       }
     }
 
     if (grounded) {
       const playerLeft = PLAYER_X, playerRight = PLAYER_X + PLAYER_SIZE;
       for (const o of obstacles) {
-        if (o.type !== 'pad' || o.triggered) continue;
+        if (o.type !== 'pad' || o.triggered || (o.side || 'floor') !== activeSide) continue;
         const screenX = o.worldX - distance;
         if (screenX + o.width <= playerLeft || screenX >= playerRight) continue;
         o.triggered = true;
-        player.vy = PAD_VELOCITY;
+        player.vy = PAD_VELOCITY * gravityDir;
         grounded = false;
         bursts.push(makeBurst(PLAYER_X + PLAYER_SIZE / 2, player.y + PLAYER_SIZE / 2, '#39ff8a'));
         break;
@@ -1040,7 +1303,7 @@
     bursts = bursts.filter(parts => parts.some(p => p.life > 0));
   }
 
-  function drawBackground() {
+  function drawBackground(dir) {
     const g = ctx.createLinearGradient(0, 0, 0, H);
     const h1 = (hue) % 360;
     const h2 = (hue + 60) % 360;
@@ -1062,40 +1325,52 @@
     }
     ctx.restore();
 
+    const surfaceY = dir === -1 ? CEIL_Y : GROUND_Y;
+
     ctx.save();
     ctx.shadowColor = `hsl(${h1}, 100%, 60%)`;
     ctx.shadowBlur = 20;
     ctx.strokeStyle = `hsl(${h1}, 100%, 60%)`;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(0, GROUND_Y);
-    ctx.lineTo(W, GROUND_Y);
+    ctx.moveTo(0, surfaceY);
+    ctx.lineTo(W, surfaceY);
     ctx.stroke();
     ctx.restore();
 
     ctx.fillStyle = 'rgba(8,6,18,0.9)';
-    ctx.fillRect(0, GROUND_Y + 2, W, H - GROUND_Y);
-
     ctx.save();
     ctx.strokeStyle = `hsla(${h2}, 100%, 60%, 0.35)`;
     ctx.lineWidth = 2;
     const gSpacing = 46;
     const gOffset = (distance) % gSpacing;
-    for (let x = -gOffset; x < W; x += gSpacing) {
-      ctx.beginPath();
-      ctx.moveTo(x, GROUND_Y + 8);
-      ctx.lineTo(x + 20, H);
-      ctx.stroke();
+    if (dir === -1) {
+      ctx.fillRect(0, 0, W, Math.max(0, CEIL_Y - 2));
+      for (let x = -gOffset; x < W; x += gSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, CEIL_Y - 8);
+        ctx.lineTo(x + 20, 0);
+        ctx.stroke();
+      }
+    } else {
+      ctx.fillRect(0, GROUND_Y + 2, W, H - GROUND_Y);
+      for (let x = -gOffset; x < W; x += gSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, GROUND_Y + 8);
+        ctx.lineTo(x + 20, H);
+        ctx.stroke();
+      }
     }
     ctx.restore();
   }
 
   function drawTrail() {
+    const skin = getEquippedSkin();
     for (const t of trail) {
       ctx.save();
       ctx.globalAlpha = Math.max(0, t.life) * 0.5;
-      ctx.fillStyle = '#4ff2ff';
-      ctx.shadowColor = '#4ff2ff';
+      ctx.fillStyle = skin.c1;
+      ctx.shadowColor = skin.c1;
       ctx.shadowBlur = 10;
       const s = PLAYER_SIZE * 0.5 * t.life;
       ctx.fillRect(t.x - s / 2, t.y - s / 2, s, s);
@@ -1105,6 +1380,7 @@
 
   function drawPlayer() {
     if (state === 'gameover') return;
+    const skin = getEquippedSkin();
     ctx.save();
     const cx = PLAYER_X + PLAYER_SIZE / 2;
     const cy = player.y + PLAYER_SIZE / 2;
@@ -1113,11 +1389,11 @@
 
     if (mode === 'ship') {
       const w = PLAYER_SIZE * 1.3, h = PLAYER_SIZE * 0.7;
-      ctx.shadowColor = '#4ff2ff';
+      ctx.shadowColor = skin.c1;
       ctx.shadowBlur = 22;
       const grad = ctx.createLinearGradient(-w / 2, 0, w / 2, 0);
-      grad.addColorStop(0, '#ff3df0');
-      grad.addColorStop(1, '#4ff2ff');
+      grad.addColorStop(0, skin.c2);
+      grad.addColorStop(1, skin.c1);
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.moveTo(-w / 2, 0);
@@ -1135,11 +1411,11 @@
       const sx = 1 + squash * 0.18;
       const sy = 1 - squash * 0.18;
       ctx.scale(sx, sy);
-      ctx.shadowColor = '#ff3df0';
+      ctx.shadowColor = skin.c2;
       ctx.shadowBlur = 24;
       const grad = ctx.createLinearGradient(-PLAYER_SIZE / 2, -PLAYER_SIZE / 2, PLAYER_SIZE / 2, PLAYER_SIZE / 2);
-      grad.addColorStop(0, '#4ff2ff');
-      grad.addColorStop(1, '#ff3df0');
+      grad.addColorStop(0, skin.c1);
+      grad.addColorStop(1, skin.c2);
       ctx.fillStyle = grad;
       const r = 8;
       const s = PLAYER_SIZE;
@@ -1202,6 +1478,35 @@
         continue;
       }
 
+      if (o.type === 'gravityPortal') {
+        const screenX = o.worldX - distance;
+        if (screenX > W + 20 || screenX < -20) continue;
+        const color = '#39ff8a';
+        ctx.save();
+        ctx.globalAlpha = o.passed ? 0.35 : 0.85;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 24;
+        const grad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+        grad.addColorStop(0, '#ffb347');
+        grad.addColorStop(0.5, color);
+        grad.addColorStop(1, '#ffb347');
+        ctx.fillStyle = grad;
+        ctx.fillRect(screenX - 5, 0, 10, GROUND_Y);
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 2;
+        const midY = GROUND_Y / 2;
+        ctx.beginPath();
+        ctx.moveTo(screenX - 9, midY - 14);
+        ctx.lineTo(screenX, midY - 24);
+        ctx.lineTo(screenX + 9, midY - 14);
+        ctx.moveTo(screenX - 9, midY + 14);
+        ctx.lineTo(screenX, midY + 24);
+        ctx.lineTo(screenX + 9, midY + 14);
+        ctx.stroke();
+        ctx.restore();
+        continue;
+      }
+
       if (o.type === 'orb') {
         const pos = orbScreenPos(o);
         if (pos.x > W + 30 || pos.x < -30) continue;
@@ -1229,16 +1534,29 @@
       ctx.save();
       ctx.shadowColor = '#ff3df0';
       ctx.shadowBlur = 16;
+      const ceilSide = (o.side || 'floor') === 'ceil';
       if (o.type === 'spike') {
         const grad = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
-        grad.addColorStop(0, '#fff');
-        grad.addColorStop(0.15, '#ff3df0');
-        grad.addColorStop(1, '#7a0068');
+        if (ceilSide) {
+          grad.addColorStop(0, '#7a0068');
+          grad.addColorStop(0.85, '#ff3df0');
+          grad.addColorStop(1, '#fff');
+        } else {
+          grad.addColorStop(0, '#fff');
+          grad.addColorStop(0.15, '#ff3df0');
+          grad.addColorStop(1, '#7a0068');
+        }
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.moveTo(r.x, r.y + r.h);
-        ctx.lineTo(r.x + r.w / 2, r.y);
-        ctx.lineTo(r.x + r.w, r.y + r.h);
+        if (ceilSide) {
+          ctx.moveTo(r.x, r.y);
+          ctx.lineTo(r.x + r.w / 2, r.y + r.h);
+          ctx.lineTo(r.x + r.w, r.y);
+        } else {
+          ctx.moveTo(r.x, r.y + r.h);
+          ctx.lineTo(r.x + r.w / 2, r.y);
+          ctx.lineTo(r.x + r.w, r.y + r.h);
+        }
         ctx.closePath();
         ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.5)';
@@ -1255,9 +1573,15 @@
         ctx.lineWidth = 1.5;
         ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
         ctx.beginPath();
-        ctx.moveTo(r.x + r.w / 2, r.y - 12);
-        ctx.lineTo(r.x + r.w * 0.22, r.y + 2);
-        ctx.lineTo(r.x + r.w * 0.78, r.y + 2);
+        if (ceilSide) {
+          ctx.moveTo(r.x + r.w / 2, r.y + r.h + 12);
+          ctx.lineTo(r.x + r.w * 0.22, r.y + r.h - 2);
+          ctx.lineTo(r.x + r.w * 0.78, r.y + r.h - 2);
+        } else {
+          ctx.moveTo(r.x + r.w / 2, r.y - 12);
+          ctx.lineTo(r.x + r.w * 0.22, r.y + 2);
+          ctx.lineTo(r.x + r.w * 0.78, r.y + 2);
+        }
         ctx.closePath();
         ctx.fillStyle = o.triggered ? 'rgba(57,255,138,0.3)' : '#39ff8a';
         ctx.fill();
@@ -1326,7 +1650,7 @@
 
   function render() {
     ctx.clearRect(0, 0, W, H);
-    drawBackground();
+    drawBackground(mode === 'ship' ? 1 : gravityDir);
     drawTrail();
     drawFinishGate();
     drawCheckpointMarker();
@@ -1340,7 +1664,7 @@
     const lengthVal = getEditorLength();
 
     ctx.clearRect(0, 0, W, H);
-    drawBackground();
+    drawBackground(1);
 
     const finishX = lengthVal - editorScroll;
     if (finishX > -20 && finishX < W + 20) {
@@ -1417,6 +1741,7 @@
 
   resize();
   resetPlayer();
+  renderRarityLegend();
   renderMenu();
   updateMuteBtn();
   if (window.NeonAudio) NeonAudio.setTheme(NeonAudio.THEMES.menu);
